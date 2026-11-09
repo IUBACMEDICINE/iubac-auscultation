@@ -267,6 +267,22 @@ const BUILTIN = [
       causes:'Acute pericarditis (viral, uremic, post-MI / Dressler syndrome, autoimmune).',
       notes:'Unlike a pleural rub, it continues when the patient holds their breath.' } },
 
+  { id:'b-vesicular', category:'breath', kind:'normal', group:'Normal breath sounds',
+    title:'Vesicular breath sounds', url:'sounds/breath/vesicular.mp3',
+    info:{ type:'Normal breath sound',
+      sound:'Soft, low-pitched, rustling sound. Inspiration is longer and louder than expiration (about 3:1), with no gap between them; expiration fades out quickly.',
+      listen:'Over most of the lung fields, especially the lung bases and the periphery of the chest.',
+      causes:'Normal finding: air moving through the small airways and alveoli, filtered by normal lung tissue.',
+      notes:'Reduced or absent vesicular sounds suggest less air entry or something between lung and stethoscope: pleural effusion, pneumothorax, emphysema, obesity, or collapse.' } },
+
+  { id:'b-bronchial', category:'breath', kind:'normal', group:'Normal breath sounds',
+    title:'Bronchial breath sounds', url:'sounds/breath/bronchial.mp3',
+    info:{ type:'Normal over the trachea only',
+      sound:'Loud, high-pitched, hollow or "tubular" sound. Expiration is as long as or longer than inspiration, with a short silent gap between them.',
+      listen:'Normally only over the trachea and just above the manubrium (sternal notch).',
+      causes:'Normal finding over the large airways, where there is little lung tissue to filter the sound.',
+      notes:'Abnormal if heard over the lung periphery: suggests consolidation (e.g. lobar pneumonia), where solid lung conducts sound from the airways. Often comes with increased vocal resonance, whispered pectoriloquy and egophony.' } },
+
   { id:'b-wheeze', category:'breath', kind:'abnormal', group:'Continuous sounds',
     title:'Wheezes', url:'sounds/breath/wheezes.mp3',
     info:{ type:'Continuous, musical adventitious sound',
@@ -292,7 +308,7 @@ const BUILTIN = [
       notes:'Compare with fine crackles: coarse = louder, lower pitch, earlier in inspiration, and altered by coughing.' } },
 ].map((s, i) => Object.assign(s, { builtin:true, created:i }));
 
-const GROUP_ORDER = ['Heart sounds','Systolic murmurs','Diastolic murmurs','Continuous murmurs','Extra heart sounds','Continuous sounds','Discontinuous sounds'];
+const GROUP_ORDER = ['Heart sounds','Normal breath sounds','Systolic murmurs','Diastolic murmurs','Continuous murmurs','Extra heart sounds','Continuous sounds','Discontinuous sounds'];
 
 function esc(t) { return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
