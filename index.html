@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IUBAC · Auscultation Sounds</title>
+<style>
+:root{--bg:#f2f2f3;--card:#fff;--ink:#45454d;--mute:#7a7a84;--line:#dcdce0;
+  --red:#c8102e;--ok:#1f7a4d;--wf-bg:#1b1b1f;color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1b1b1f;--card:#26262c;--ink:#e8e8ec;--mute:#9a9aa6;--line:#3a3a42;
+  --red:#ff3b54;--ok:#4cc58a;color-scheme:dark}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Verdana,"DejaVu Sans",sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.logo{width:82px;height:82px;border-radius:4px;border:3px solid var(--ink);
+  background:var(--red);display:flex;align-items:center;justify-content:center;
+  flex:none;box-shadow:5px 5px 0 var(--red);overflow:hidden}
+.logo svg{width:54px;height:54px;fill:#fff}
+h1{font-size:clamp(30px,6vw,46px);line-height:1;font-weight:900;letter-spacing:1px;
+  text-shadow:3px 3px 0 rgba(0,0,0,.28)}
+h1 span{color:var(--mute);font-weight:700;font-size:16px;display:block;
+  text-shadow:none;letter-spacing:0;margin-top:2px}
+.heart{color:var(--red)}.beat{display:inline-block;animation:beat 1.1s infinite}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.3)}30%{transform:scale(1)}45%{transform:scale(1.2)}}
+@media(prefers-reduced-motion:reduce){.beat{animation:none}}
+.ecg{width:100%;height:36px;margin:-6px 0 16px;display:block}
+
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+.tab{flex:1;padding:12px;border:3px solid var(--ink);background:var(--card);
+  color:var(--ink);border-radius:4px;font:inherit;font-weight:800;
+  text-transform:uppercase;letter-spacing:1px;cursor:pointer;
+  box-shadow:4px 4px 0 var(--ink);transition:all .1s}
+.tab[aria-selected=true]{background:var(--red);color:#fff;
+  transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:3px solid var(--ink);border-radius:4px;
+  padding:16px;box-shadow:6px 6px 0 var(--ok)}
+.panel.abn{box-shadow:6px 6px 0 var(--red)}
+.panel h2{margin:0 0 10px;font-size:20px;font-weight:900;text-transform:uppercase;
+  letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,.2)}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--ink);
+  border-radius:4px;padding:10px;width:100%}
+select{cursor:pointer}
+audio{width:100%;margin:8px 0 2px;border-radius:8px}
+.notes{color:var(--mute);font-size:14px;min-height:20px;margin-top:6px}
+
+.waveform{width:100%;height:84px;border-radius:4px;background:#141418;
+  border:2px solid var(--line);margin:6px 0;display:block;cursor:pointer}
+
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:4px 0 4px;font-size:13px;color:var(--mute);flex-wrap:wrap}
+.ctrl-row label{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;font-weight:700}
+.vol-group{display:flex;align-items:center;gap:6px}
+.vol-group span{font-weight:700;font-size:12px;color:var(--ink)}
+.vol-group input[type=range]{width:90px;accent-color:var(--red);cursor:pointer;margin:0}
+.vol-badge{font-size:11px;font-weight:800;background:var(--ink);color:var(--bg);
+  padding:2px 6px;border-radius:3px;min-width:40px;text-align:center}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.row button{flex:1;min-width:140px;background:var(--red);color:#fff;
+  border:3px solid var(--ink);border-radius:4px;padding:12px;font:inherit;
+  font-weight:800;cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:all .1s}
+.row button:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+.row button.alt{background:var(--ink);color:var(--bg)}
+
+/* ── Heart Sounds Diagram ──────────────────────────────────────── */
+.diagram-card{background:var(--card);border:3px solid var(--ink);border-radius:4px;
+  padding:16px;margin:18px 0;box-shadow:6px 6px 0 var(--ink)}
+.diagram-card h3{margin:0 0 12px;font-size:18px;font-weight:900;text-transform:uppercase;
+  letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,.15)}
+.diagram-wrap{background:#fff;border:2px solid var(--line);border-radius:4px;padding:12px;text-align:center}
+.diagram-wrap img{max-width:100%;height:auto;max-height:550px;display:block;margin:0 auto;object-fit:contain}
+
+
+/* ── Sound description card ───────────────────────────────────── */
+.info{margin-top:10px;font-size:13px;line-height:1.5;color:var(--ink)}
+.info .type{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.5px;background:var(--ink);color:var(--bg);padding:2px 7px;border-radius:3px;margin-bottom:8px}
+.info dl{display:grid;grid-template-columns:96px 1fr;gap:6px 10px;margin:0}
+.info dt{font-weight:800;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding-top:2px}
+.info dd{margin:0}
+@media(max-width:420px){.info dl{grid-template-columns:1fr}.info dt{padding-top:6px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 100 90" aria-hidden="true">
+      <path d="M50 85C25 62 5 47 5 28 5 13 16 3 30 3c9 0 17 5 20 12C53 8 61 3 70 3c14 0 25 10 25 25 0 19-20 34-45 57Z"/>
+    </svg>
+  </div>
+  <h1>IUBAC<span>Medicine <span class="heart beat" style="font-size:inherit">♥</span></span></h1>
+</header>
+
+<svg class="ecg" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+  <polyline points="0,20 200,20 220,20 232,4 246,36 258,20 600,20"
+    fill="none" stroke="#c8102e" stroke-width="3" stroke-linejoin="round"
+    vector-effect="non-scaling-stroke"/>
+</svg>
+
+<div class="tabs" role="tablist">
+  <button class="tab" data-c="heart" role="tab">Heart sounds</button>
+  <button class="tab" data-c="breath" role="tab">Breath sounds</button>
+</div>
+
+<div class="grid" id="audioGrid">
+  <div class="panel">
+    <h2>Normal</h2>
+    <select id="selN" aria-label="Normal sound"></select>
+    <canvas id="wfN" class="waveform" title="Waveform (click to seek)"></canvas>
+    <audio id="aN" controls preload="none"></audio>
+    <div class="ctrl-row">
+      <label><input type="checkbox" id="loopN"> Loop</label>
+      <div class="vol-group" title="Volume Booster (up to 500%)">
+        <span>🔊</span>
+        <input type="range" id="volN" min="1" max="5" step="0.25" value="1.5">
+        <span class="vol-badge" id="volBadgeN">150%</span>
+      </div>
+    </div>
+    <div class="notes" id="nN"></div>
+  </div>
+  <div class="panel abn">
+    <h2>Abnormal</h2>
+    <select id="selA" aria-label="Abnormal sound"></select>
+    <canvas id="wfA" class="waveform" title="Waveform (click to seek)"></canvas>
+    <audio id="aA" controls preload="none"></audio>
+    <div class="ctrl-row">
+      <label><input type="checkbox" id="loopA"> Loop</label>
+      <div class="vol-group" title="Volume Booster (up to 500%)">
+        <span>🔊</span>
+        <input type="range" id="volA" min="1" max="5" step="0.25" value="1.5">
+        <span class="vol-badge" id="volBadgeA">150%</span>
+      </div>
+    </div>
+    <div class="notes" id="nA"></div>
+  </div>
+</div>
+
+<div class="row" id="audioControls">
+  <button id="both">▶ Play both together</button>
+  <button class="alt" id="seq">▶ Normal, then abnormal</button>
+</div>
+
+<!-- Heart Sounds Diagram (Visible for Heart sounds only) -->
+<div id="heartDiagram" class="diagram-card">
+  <h3>Heart Sounds & Murmurs Timing</h3>
+  <div class="diagram-wrap">
+    <img src="heart-sounds-diagram.png" alt="Phonocardiogram waveforms of normal heart sounds and common murmurs" loading="lazy">
+  </div>
+</div>
+
+<!-- Breathing Patterns Diagram (Visible for Breath sounds only) -->
+<div id="breathDiagram" class="diagram-card" style="display:none;">
+  <h3>Breathing Patterns</h3>
+  <div class="diagram-wrap">
+    <img src="breathing-patterns-diagram.png" alt="Clinical breathing patterns diagram" loading="lazy">
+  </div>
+</div>
+
+
+</div>
+
+<script>
+/* =================================================================
+   IUBAC · Auscultation Sounds
+   Built-in recordings live in the sounds/ folder.
+   ================================================================= */
+
+const $ = id => document.getElementById(id);
+let sounds = [];
+let cat = 'heart';
+
+// ── Built-in recordings (files in sounds/heart/) ─────────────────
+const BUILTIN = [
+  { id:'b-split-s2', category:'heart', kind:'normal', group:'Heart sounds',
+    title:'Split S2 (physiologic)', url:'sounds/heart/split-s2.mp3',
+    info:{ type:'Physiologic splitting of S2',
+      sound:'S2 is heard as two parts (A2 then P2). The split widens on inspiration and narrows or disappears on expiration.',
+      listen:'Pulmonic area: left 2nd intercostal space.',
+      causes:'Normal finding. Inspiration increases venous return to the right heart, which delays pulmonic valve closure.',
+      notes:'Abnormal patterns: wide split (RBBB, pulmonic stenosis), fixed split (ASD), paradoxical split (LBBB, severe aortic stenosis).' } },
+
+  { id:'b-as', category:'heart', kind:'abnormal', group:'Systolic murmurs',
+    title:'Aortic stenosis', url:'sounds/heart/aortic-stenosis.mp3',
+    info:{ type:'Systolic ejection murmur',
+      sound:'Harsh crescendo–decrescendo murmur after S1, sometimes with an ejection click. S2 may be soft.',
+      listen:'Aortic area (right 2nd intercostal space, heart base). Radiates to the carotids.',
+      causes:'Age-related calcification (usually over 60 years). Earlier calcification of a congenital bicuspid valve (around 50–60 years).',
+      notes:'Pulsus parvus et tardus: weak pulse with a delayed peak. Can cause Syncope, Angina and Dyspnea on exertion (SAD). LV pressure is higher than aortic pressure during systole.' } },
+
+  { id:'b-mr', category:'heart', kind:'abnormal', group:'Systolic murmurs',
+    title:'Mitral regurgitation', url:'sounds/heart/mitral-regurgitation.mp3',
+    info:{ type:'Holosystolic murmur',
+      sound:'High-pitched, "blowing" murmur that lasts through all of systole.',
+      listen:'Apex (mitral area). Radiates toward the left axilla.',
+      causes:'Often ischemic heart disease (post-MI), mitral valve prolapse, LV dilatation or rheumatic fever. Infective endocarditis can also cause it.',
+      notes:'Tricuspid regurgitation sounds similar but is loudest at the tricuspid area (left lower sternal border). TR is often due to RV dilatation.' } },
+
+  { id:'b-mvp', category:'heart', kind:'abnormal', group:'Systolic murmurs',
+    title:'Mitral valve prolapse', url:'sounds/heart/mitral-valve-prolapse.mp3',
+    info:{ type:'Mid-systolic click + late systolic murmur',
+      sound:'A mid-systolic click (MC), then a late crescendo murmur that is loudest just before S2.',
+      listen:'Apex (mitral area).',
+      causes:'Myxomatous degeneration (primary, or with connective tissue disease), rheumatic fever, chordae rupture, mitral annular disjunction.',
+      notes:'Usually benign, but can predispose to infective endocarditis. The click comes from sudden tensing of the chordae tendineae as the leaflets prolapse into the LA.' } },
+
+  { id:'b-vsd', category:'heart', kind:'abnormal', group:'Systolic murmurs',
+    title:'Ventricular septal defect', url:'sounds/heart/ventricular-septal-defect.mp3',
+    info:{ type:'Holosystolic murmur',
+      sound:'Harsh-sounding murmur through all of systole.',
+      listen:'Tricuspid area (left lower sternal border).',
+      causes:'Congenital.',
+      notes:'Larger VSDs have a lower-intensity murmur than smaller VSDs.' } },
+
+  { id:'b-ps', category:'heart', kind:'abnormal', group:'Systolic murmurs',
+    title:'Pulmonic stenosis', url:'sounds/heart/pulmonic-stenosis.mp3',
+    info:{ type:'Systolic ejection murmur',
+      sound:'Crescendo–decrescendo murmur, sometimes with an ejection click. In severe cases S2 is widely split with a soft P2.',
+      listen:'Pulmonic area (left 2nd intercostal space). Louder on inspiration.',
+      causes:'Usually congenital (isolated, Tetralogy of Fallot, Noonan syndrome). Also carcinoid syndrome.',
+      notes:'The pulmonic area also carries the murmurs of atrial septal defect and flow murmurs. Right-sided murmurs get louder on inspiration.' } },
+
+  { id:'b-ms', category:'heart', kind:'abnormal', group:'Diastolic murmurs',
+    title:'Mitral stenosis', url:'sounds/heart/mitral-stenosis.mp3',
+    info:{ type:'Diastolic murmur with opening snap',
+      sound:'An opening snap (OS) after S2, then a delayed, low-pitched rumbling mid-to-late diastolic murmur.',
+      listen:'Apex (mitral area). Best with the bell, patient lying on the left side.',
+      causes:'A late and highly specific sequela of rheumatic fever.',
+      notes:'A shorter S2–OS interval means more severe stenosis. Chronic MS can cause LA dilation, pulmonary congestion, atrial fibrillation, Ortner syndrome, hemoptysis and right heart failure. LA pressure is much higher than LV pressure during diastole.' } },
+
+  { id:'b-pda', category:'heart', kind:'abnormal', group:'Continuous murmurs',
+    title:'Patent ductus arteriosus', url:'sounds/heart/patent-ductus-arteriosus.mp3',
+    info:{ type:'Continuous murmur',
+      sound:'Continuous "machine-like" murmur through systole and diastole, loudest at S2.',
+      listen:'Left infraclavicular area.',
+      causes:'Often congenital rubella or prematurity.',
+      notes:'Mnemonic: "You need a patent for that machine."' } },
+
+  { id:'b-s3', category:'heart', kind:'abnormal', group:'Extra heart sounds',
+    title:'S3 (third heart sound)', url:'sounds/heart/s3-third-heart-sound.mp3',
+    info:{ type:'Early diastolic extra sound (ventricular gallop)',
+      sound:'Low-pitched sound just after S2: "Ken-TUCK-y" rhythm.',
+      listen:'Apex with the bell, patient lying on the left side.',
+      causes:'Rapid filling of a volume-overloaded or dilated ventricle: heart failure, dilated cardiomyopathy, mitral or tricuspid regurgitation, high-output states.',
+      notes:'Can be normal in children, young adults, athletes and pregnancy. Usually pathologic in older adults.' } },
+
+  { id:'b-s4', category:'heart', kind:'abnormal', group:'Extra heart sounds',
+    title:'S4 (fourth heart sound)', url:'sounds/heart/s4-fourth-heart-sound.mp3',
+    info:{ type:'Late diastolic extra sound (atrial gallop)',
+      sound:'Low-pitched sound just before S1: "TEN-nes-see" rhythm.',
+      listen:'Apex with the bell, patient lying on the left side.',
+      causes:'The atrium contracting against a stiff ventricle: hypertension, LV hypertrophy, aortic stenosis, hypertrophic cardiomyopathy, ischemia.',
+      notes:'Almost always pathologic. Absent in atrial fibrillation, since there is no effective atrial contraction.' } },
+
+  { id:'b-rub', category:'heart', kind:'abnormal', group:'Extra heart sounds',
+    title:'Pericardial friction rub', url:'sounds/heart/pericardial-friction-rub.mp3',
+    info:{ type:'Scratchy extra sound',
+      sound:'High-pitched, scratchy or "leathery" sound with up to three parts (atrial systole, ventricular systole, ventricular diastole).',
+      listen:'Left lower sternal border with the diaphragm, patient sitting up and leaning forward, breath held in expiration.',
+      causes:'Acute pericarditis (viral, uremic, post-MI / Dressler syndrome, autoimmune).',
+      notes:'Unlike a pleural rub, it continues when the patient holds their breath.' } },
+
+  { id:'b-wheeze', category:'breath', kind:'abnormal', group:'Continuous sounds',
+    title:'Wheezes', url:'sounds/breath/wheezes.wav',
+    info:{ type:'Continuous, musical adventitious sound',
+      sound:'High-pitched, whistling or musical sound, mostly during expiration. Can also be heard on inspiration in severe obstruction.',
+      listen:'Over all lung fields. Often audible at the mouth without a stethoscope. Diffuse (bilateral) or localized.',
+      causes:'Air flowing through narrowed airways: asthma, COPD, bronchiolitis. A localized, fixed wheeze suggests a tumor or foreign body.',
+      notes:'A low-pitched, snoring version is called rhonchi (secretions in larger airways; may clear with coughing). Beware a "silent chest" in severe asthma: wheeze disappears when airflow is very poor.' } },
+
+  { id:'b-fine', category:'breath', kind:'abnormal', group:'Discontinuous sounds',
+    title:'Fine crackles', url:'sounds/breath/fine-crackles.wav',
+    info:{ type:'Discontinuous adventitious sound',
+      sound:'Soft, high-pitched, very brief popping sounds in late inspiration, like hair rubbed between the fingers or Velcro being pulled apart.',
+      listen:'Lung bases, posteriorly. Do not clear with coughing.',
+      causes:'Small airways and alveoli snapping open: pulmonary fibrosis / interstitial lung disease, early heart failure (pulmonary edema), early pneumonia, atelectasis.',
+      notes:'Also called rales. "Velcro" crackles at both bases strongly suggest pulmonary fibrosis.' } },
+
+  { id:'b-coarse', category:'breath', kind:'abnormal', group:'Discontinuous sounds',
+    title:'Coarse crackles', url:'sounds/breath/coarse-crackles.wav',
+    info:{ type:'Discontinuous adventitious sound',
+      sound:'Louder, lower-pitched, longer bubbling or gurgling sounds, in early inspiration and often in expiration too.',
+      listen:'Over the affected area; often over the larger airways. May change or clear after coughing.',
+      causes:'Air bubbling through secretions in larger airways: bronchiectasis, chronic bronchitis / COPD, pneumonia, advanced pulmonary edema.',
+      notes:'Compare with fine crackles: coarse = louder, lower pitch, earlier in inspiration, and altered by coughing.' } },
+].map((s, i) => Object.assign(s, { builtin:true, created:i }));
+
+const GROUP_ORDER = ['Heart sounds','Systolic murmurs','Diastolic murmurs','Continuous murmurs','Extra heart sounds','Continuous sounds','Discontinuous sounds'];
+
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderNotes(el, s) {
+  if (!s.info) { el.textContent = s.notes || ''; return; }
+  const i = s.info;
+  const rows = [['Sound', i.sound], ['Best heard', i.listen], ['Causes', i.causes], ['Notes', i.notes]]
+    .filter(r => r[1]).map(r => '<dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd>').join('');
+  el.innerHTML = '<div class="info">' + (i.type ? '<span class="type">' + esc(i.type) + '</span>' : '') + '<dl>' + rows + '</dl></div>';
+}
+
+// ── Web Audio Amplification & Boost ──────────────────────────────
+const Wave = {
+  ctx: null,
+  _sources: new WeakMap(),
+  _gains: new WeakMap(),
+
+  ensure() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+
+  connect(audioEl, initialGain) {
+    this.ensure();
+    if (this._sources.has(audioEl)) return;
+    try {
+      const src = this.ctx.createMediaElementSource(audioEl);
+      const gain = this.ctx.createGain();
+      gain.gain.value = initialGain || 1.5;
+      const comp = this.ctx.createDynamicsCompressor();
+      comp.threshold.value = -4;
+      comp.knee.value = 12;
+      comp.ratio.value = 10;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+      src.connect(gain);
+      gain.connect(comp);
+      comp.connect(this.ctx.destination);
+      this._sources.set(audioEl, src);
+      this._gains.set(audioEl, gain);
+    } catch (e) {
+      console.warn('Audio amplification fallback:', e);
+    }
+  },
+
+  setGain(audioEl, value) {
+    this.ensure();
+    if (!this._sources.has(audioEl)) this.connect(audioEl, value);
+    const g = this._gains.get(audioEl);
+    if (g) g.gain.setTargetAtTime(value, this.ctx.currentTime, 0.03);
+  }
+};
+
+// ── Real Audio Phonocardiogram (PCG) Engine ──────────────────────
+const PCG = {
+  states: new WeakMap(),
+  cache: new Map(),
+
+  // Extract true acoustic phonocardiogram from decoded PCM AudioBuffer
+  extractWaveData(audioBuffer, numPoints = 600) {
+    const channelData = audioBuffer.getChannelData(0);
+    const totalSamples = channelData.length;
+    const duration = audioBuffer.duration;
+    const blockSize = Math.max(1, Math.floor(totalSamples / numPoints));
+
+    const mins = [];
+    const maxs = [];
+    const peaks = [];
+
+    let globalMax = 0;
+    for (let i = 0; i < numPoints; i++) {
+      const start = i * blockSize;
+      const end = Math.min(start + blockSize, totalSamples);
+      let min = 0;
+      let max = 0;
+      for (let j = start; j < end; j++) {
+        const v = channelData[j];
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      mins.push(min);
+      maxs.push(max);
+      const peak = Math.max(Math.abs(min), Math.abs(max));
+      peaks.push(peak);
+      if (peak > globalMax) globalMax = peak;
+    }
+
+    // Normalize so low-gain recordings fill the visualizer clearly
+    const norm = globalMax > 0.005 ? (0.92 / globalMax) : 1;
+    for (let i = 0; i < numPoints; i++) {
+      mins[i] = Math.max(-1, mins[i] * norm);
+      maxs[i] = Math.min(1, maxs[i] * norm);
+    }
+
+    return { mins, maxs, duration };
+  },
+
+  // Decode audio from URL or stored data
+  async loadSoundWaveData(sound) {
+    if (!sound) return null;
+    const key = sound.id || sound.url;
+    if (sound.waveData && sound.waveData.mins && sound.waveData.mins.length) {
+      return sound.waveData;
+    }
+    if (this.cache.has(key)) return this.cache.get(key);
+
+    try {
+      Wave.ensure();
+      const resp = await fetch(sound.url);
+      const arrayBuf = await resp.arrayBuffer();
+      const audioBuf = await Wave.ctx.decodeAudioData(arrayBuf);
+      const waveData = this.extractWaveData(audioBuf);
+      this.cache.set(key, waveData);
+      return waveData;
+    } catch (e) {
+      console.warn('Real audio decoding fallback:', e);
+      return null;
+    }
+  },
+
+  async setSound(canvas, sound) {
+    const state = this.states.get(canvas);
+    if (!state) return;
+    state.sound = sound;
+    state.waveData = sound && sound.waveData ? sound.waveData : null;
+    state.loading = !!sound && !state.waveData;
+    this.draw(canvas);
+
+    if (sound && !state.waveData) {
+      const waveData = await this.loadSoundWaveData(sound);
+      if (state.sound === sound) {
+        state.waveData = waveData;
+        state.loading = false;
+        this.draw(canvas);
+      }
+    }
+  },
+
+  draw(canvas) {
+    const state = this.states.get(canvas);
+    if (!state) return;
+    const { audioEl, color, sound, waveData, loading } = state;
+    const ctx = canvas.getContext('2d');
+    const dpr = devicePixelRatio || 1;
+    const w = canvas.width = canvas.clientWidth * dpr;
+    const h = canvas.height = canvas.clientHeight * dpr;
+    const cy = h * 0.50;
+    const maxHalfH = h * 0.38;
+
+    // Deep slate canvas background
+    ctx.fillStyle = '#141418';
+    ctx.fillRect(0, 0, w, h);
+
+    if (!sound) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.font = 'bold ' + (11 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO RECORDING LOADED', w / 2, cy + 4 * dpr);
+      return;
+    }
+
+    if (loading && !waveData) {
+      ctx.fillStyle = color;
+      ctx.font = 'bold ' + (11 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('READING AUDIO SIGNAL…', w / 2, cy + 4 * dpr);
+      return;
+    }
+
+    const duration = (waveData && waveData.duration) || (audioEl && audioEl.duration) || 0;
+
+    // Timeline duration scale
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.font = 'bold ' + (8.5 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('0.0s', 8 * dpr, h - 4 * dpr);
+    ctx.textAlign = 'right';
+    ctx.fillText(duration ? duration.toFixed(1) + 's' : '', w - 8 * dpr, h - 4 * dpr);
+    ctx.textAlign = 'center';
+    ctx.fillText(duration ? (duration / 2).toFixed(1) + 's' : '', w / 2, h - 4 * dpr);
+
+    // Horizontal baseline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(w, cy);
+    ctx.stroke();
+
+    // Draw the REAL PCM audio waveform data
+    if (waveData && waveData.mins && waveData.maxs && waveData.mins.length) {
+      const mins = waveData.mins;
+      const maxs = waveData.maxs;
+      const numPoints = mins.length;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, (w / numPoints) * 0.95);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 4 * dpr;
+
+      for (let i = 0; i < numPoints; i++) {
+        const x = (i / numPoints) * w;
+        const topY = cy - (maxs[i] * maxHalfH);
+        const botY = cy - (mins[i] * maxHalfH);
+
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x, Math.max(botY, topY + 1.2 * dpr));
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    // Real-time Playhead Cursor
+    if (audioEl && duration > 0) {
+      const progress = Math.max(0, Math.min(1, (audioEl.currentTime || 0) / duration));
+      const playheadX = progress * w;
+
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 8 * dpr;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 4 * dpr);
+      ctx.lineTo(playheadX, h - 4 * dpr);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(playheadX, 6 * dpr, 3 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Current playback timestamp indicator in top right
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = 'bold ' + (9 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(audioEl.currentTime.toFixed(1) + 's / ' + duration.toFixed(1) + 's', w - 8 * dpr, 12 * dpr);
+    }
+  },
+
+  bind(canvas, audioEl, color, getGain) {
+    const state = { audioEl, color, sound: null, waveData: null, animId: null, loading: false };
+    this.states.set(canvas, state);
+
+    requestAnimationFrame(() => this.draw(canvas));
+
+    const animate = () => {
+      this.draw(canvas);
+      if (!audioEl.paused && !audioEl.ended) {
+        state.animId = requestAnimationFrame(animate);
+      }
+    };
+
+    audioEl.addEventListener('play', () => {
+      Wave.ensure();
+      Wave.connect(audioEl, getGain ? getGain() : 1.5);
+      if (state.animId) cancelAnimationFrame(state.animId);
+      state.animId = requestAnimationFrame(animate);
+    });
+
+    audioEl.addEventListener('pause', () => {
+      if (state.animId) cancelAnimationFrame(state.animId);
+      this.draw(canvas);
+    });
+
+    audioEl.addEventListener('timeupdate', () => {
+      if (audioEl.paused) this.draw(canvas);
+    });
+
+    audioEl.addEventListener('ended', () => {
+      if (state.animId) cancelAnimationFrame(state.animId);
+      this.draw(canvas);
+    });
+
+    // Click anywhere on real wave to seek
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const dur = (state.waveData && state.waveData.duration) || audioEl.duration;
+      if (dur && !isNaN(dur) && dur > 0) {
+        audioEl.currentTime = pct * dur;
+        this.draw(canvas);
+      }
+    });
+
+    window.addEventListener('resize', () => this.draw(canvas));
+  }
+};
+
+// ── UI Helpers ───────────────────────────────────────────────────
+function fillSelect(sel, list) {
+  sel.innerHTML = '';
+  if (!list.length) { sel.innerHTML = '<option>No recordings yet</option>'; sel.disabled = true; return; }
+  sel.disabled = false;
+  const groups = {};
+  list.forEach(s => { const g = s.group || 'My recordings'; (groups[g] = groups[g] || []).push(s); });
+  const names = Object.keys(groups).sort((a, b) => {
+    const ia = GROUP_ORDER.indexOf(a), ib = GROUP_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  const useGroups = names.length > 1;
+  names.forEach(g => {
+    const parent = useGroups ? document.createElement('optgroup') : sel;
+    if (useGroups) { parent.label = g; sel.appendChild(parent); }
+    groups[g].forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.title; parent.appendChild(o); });
+  });
+}
+
+function showSound(sel, audioEl, noteEl, canvas, list) {
+  const s = list.find(x => x.id === sel.value);
+  if (s) {
+    audioEl.src = s.url;
+    renderNotes(noteEl, s);
+    PCG.setSound(canvas, s);
+  } else {
+    audioEl.removeAttribute('src');
+    audioEl.load();
+    noteEl.textContent = '';
+    PCG.setSound(canvas, null);
+  }
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function render() {
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.c === cat));
+
+  if ($('heartDiagram')) {
+    $('heartDiagram').style.display = (cat === 'heart') ? 'block' : 'none';
+  }
+  if ($('breathDiagram')) {
+    $('breathDiagram').style.display = (cat === 'breath') ? 'block' : 'none';
+  }
+
+  const N = sounds.filter(s => s.category === cat && s.kind === 'normal');
+  const A = sounds.filter(s => s.category === cat && s.kind === 'abnormal');
+  const pn = $('selN').value, pa = $('selA').value;
+  fillSelect($('selN'), N); fillSelect($('selA'), A);
+  if (N.some(s => s.id === pn)) $('selN').value = pn;
+  if (A.some(s => s.id === pa)) $('selA').value = pa;
+  showSound($('selN'), $('aN'), $('nN'), $('wfN'), N);
+  showSound($('selA'), $('aA'), $('nA'), $('wfA'), A);
+  $('selN').onchange = () => showSound($('selN'), $('aN'), $('nN'), $('wfN'), N);
+  $('selA').onchange = () => showSound($('selA'), $('aA'), $('nA'), $('wfA'), A);
+}
+
+// ── Wire Events ──────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { cat = t.dataset.c; render(); });
+$('loopN').onchange = () => { $('aN').loop = $('loopN').checked; };
+$('loopA').onchange = () => { $('aA').loop = $('loopA').checked; };
+$('volN').oninput = () => { const v = +$('volN').value; $('volBadgeN').textContent = Math.round(v*100)+'%'; Wave.setGain($('aN'), v); };
+$('volA').oninput = () => { const v = +$('volA').value; $('volBadgeA').textContent = Math.round(v*100)+'%'; Wave.setGain($('aA'), v); };
+PCG.bind($('wfN'), $('aN'), '#4cc58a', () => +$('volN').value);
+PCG.bind($('wfA'), $('aA'), '#ff3b54', () => +$('volA').value);
+
+$('both').onclick = () => {
+  [$('aN'),$('aA')].forEach(a => { a.pause(); a.currentTime = 0; });
+  [$('aN'),$('aA')].filter(a => a.src && a.src !== location.href).forEach(a => a.play().catch(()=>{}));
+};
+$('seq').onclick = () => {
+  const n=$('aN'),a=$('aA'); n.pause(); a.pause(); n.currentTime=0; a.currentTime=0;
+  const hasN = n.src && n.src !== location.href, hasA = a.src && a.src !== location.href;
+  if (hasN) { n.onended = () => { n.onended=null; if(hasA) a.play().catch(()=>{}); }; n.play().catch(()=>{}); }
+  else if (hasA) a.play().catch(()=>{});
+};
+
+// ── Boot ──
+sounds = BUILTIN.slice();
+render();
+</script>
+</body>
+</html>
