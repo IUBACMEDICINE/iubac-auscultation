@@ -156,6 +156,14 @@ audio{width:100%;margin:8px 0 2px;border-radius:8px}
   </div>
 </div>
 
+<!-- Vesicular vs Bronchial table (Breath sounds only) -->
+<div id="breathCompare" class="diagram-card" style="display:none;">
+  <h3>Vesicular vs Bronchial Breath Sounds</h3>
+  <div class="diagram-wrap">
+    <img src="breath-sounds-vesicular-vs-bronchial.png" alt="Table comparing vesicular and bronchial breath sounds: timing, intensity, pitch and where they are normally heard" loading="lazy">
+  </div>
+</div>
+
 <!-- Breathing Patterns Diagram (Visible for Breath sounds only) -->
 <div id="breathDiagram" class="diagram-card" style="display:none;">
   <h3>Breathing Patterns</h3>
@@ -270,16 +278,16 @@ const BUILTIN = [
   { id:'b-vesicular', category:'breath', kind:'normal', group:'Normal breath sounds',
     title:'Vesicular breath sounds', url:'sounds/breath/vesicular.mp3',
     info:{ type:'Normal breath sound',
-      sound:'Soft, low-pitched, rustling sound. Inspiration is longer and louder than expiration (about 3:1), with no gap between them; expiration fades out quickly.',
-      listen:'Over most of the lung fields, especially the lung bases and the periphery of the chest.',
+      sound:'Soft, breathy, low-pitched (about 100 Hz). Inspiration is longer than expiration, with no gap between them; expiration fades out quickly.',
+      listen:'Posterior lung bases, and over most of the lung periphery.',
       causes:'Normal finding: air moving through the small airways and alveoli, filtered by normal lung tissue.',
       notes:'Reduced or absent vesicular sounds suggest less air entry or something between lung and stethoscope: pleural effusion, pneumothorax, emphysema, obesity, or collapse.' } },
 
   { id:'b-bronchial', category:'breath', kind:'normal', group:'Normal breath sounds',
     title:'Bronchial breath sounds', url:'sounds/breath/bronchial.mp3',
-    info:{ type:'Normal over the trachea only',
-      sound:'Loud, high-pitched, hollow or "tubular" sound. Expiration is as long as or longer than inspiration, with a short silent gap between them.',
-      listen:'Normally only over the trachea and just above the manubrium (sternal notch).',
+    info:{ type:'Normal over the trachea / right apex',
+      sound:'Loud, harsh, tubular, high-pitched (300–400 Hz). Expiration is longer than inspiration, with a pause between them.',
+      listen:'Normally over the trachea, and can be normal at the right apex.',
       causes:'Normal finding over the large airways, where there is little lung tissue to filter the sound.',
       notes:'Abnormal if heard over the lung periphery: suggests consolidation (e.g. lobar pneumonia), where solid lung conducts sound from the airways. Often comes with increased vocal resonance, whispered pectoriloquy and egophony.' } },
 
@@ -639,6 +647,9 @@ function render() {
 
   if ($('heartDiagram')) {
     $('heartDiagram').style.display = (cat === 'heart') ? 'block' : 'none';
+  }
+  if ($('breathCompare')) {
+    $('breathCompare').style.display = (cat === 'breath') ? 'block' : 'none';
   }
   if ($('breathDiagram')) {
     $('breathDiagram').style.display = (cat === 'breath') ? 'block' : 'none';
