@@ -424,10 +424,9 @@ const PCG = {
     if (this.cache.has(key)) return this.cache.get(key);
 
     try {
-      Wave.ensure();
       const resp = await fetch(sound.url);
       const arrayBuf = await resp.arrayBuffer();
-      const audioBuf = await Wave.ctx.decodeAudioData(arrayBuf);
+      const audioBuf = await this.decode(arrayBuf);
       const waveData = this.extractWaveData(audioBuf);
       this.cache.set(key, waveData);
       return waveData;
@@ -435,6 +434,22 @@ const PCG = {
       console.warn('Real audio decoding fallback:', e);
       return null;
     }
+  },
+
+  // Decoding for the waveform uses a tiny offline context, so the live audio
+  // engine is only started when the user actually presses play.
+  _decoder: null,
+  decode(buf) {
+    if (!this._decoder) {
+      const Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      try { if (Off) this._decoder = new Off(1, 1, 44100); } catch (e) {}
+      if (!this._decoder) { Wave.ensure(); this._decoder = Wave.ctx; }
+    }
+    const ctx = this._decoder;
+    return new Promise((res, rej) => {
+      const pr = ctx.decodeAudioData(buf, res, rej);
+      if (pr && pr.then) pr.then(res, rej);
+    });
   },
 
   async setSound(canvas, sound) {
@@ -455,107 +470,93 @@ const PCG = {
     }
   },
 
-  draw(canvas) {
-    const state = this.states.get(canvas);
-    if (!state) return;
-    const { audioEl, color, sound, waveData, loading } = state;
-    const ctx = canvas.getContext('2d');
-    const dpr = devicePixelRatio || 1;
-    const w = canvas.width = canvas.clientWidth * dpr;
-    const h = canvas.height = canvas.clientHeight * dpr;
-    const cy = h * 0.50;
-    const maxHalfH = h * 0.38;
+  _font(px, dpr) {
+    return 'bold ' + (px * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  },
 
-    // Deep slate canvas background
+  // Background, labels and waveform are drawn ONCE per sound/size into an
+  // offscreen canvas. Animation frames just copy it and add the playhead.
+  buildBase(state, w, h, dpr, key) {
+    const base = state.base || (state.base = document.createElement('canvas'));
+    base.width = w; base.height = h;
+    const ctx = base.getContext('2d');
+    const { color, sound, waveData, loading } = state;
+    const cy = h * 0.5, maxHalfH = h * 0.38;
+
     ctx.fillStyle = '#141418';
     ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
 
     if (!sound) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.font = 'bold ' + (11 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'center';
+      ctx.font = this._font(11, dpr);
       ctx.fillText('NO RECORDING LOADED', w / 2, cy + 4 * dpr);
-      return;
-    }
+    } else if (!waveData) {
+      if (loading) {
+        ctx.fillStyle = color;
+        ctx.font = this._font(11, dpr);
+        ctx.fillText('READING AUDIO SIGNAL…', w / 2, cy + 4 * dpr);
+      }
+    } else {
+      const duration = waveData.duration || 0;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.font = this._font(8.5, dpr);
+      ctx.textAlign = 'left';  ctx.fillText('0.0s', 8 * dpr, h - 4 * dpr);
+      ctx.textAlign = 'right'; ctx.fillText(duration ? duration.toFixed(1) + 's' : '', w - 8 * dpr, h - 4 * dpr);
+      ctx.textAlign = 'center'; ctx.fillText(duration ? (duration / 2).toFixed(1) + 's' : '', w / 2, h - 4 * dpr);
 
-    if (loading && !waveData) {
-      ctx.fillStyle = color;
-      ctx.font = 'bold ' + (11 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('READING AUDIO SIGNAL…', w / 2, cy + 4 * dpr);
-      return;
-    }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = dpr;
+      ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
 
-    const duration = (waveData && waveData.duration) || (audioEl && audioEl.duration) || 0;
-
-    // Timeline duration scale
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.font = 'bold ' + (8.5 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('0.0s', 8 * dpr, h - 4 * dpr);
-    ctx.textAlign = 'right';
-    ctx.fillText(duration ? duration.toFixed(1) + 's' : '', w - 8 * dpr, h - 4 * dpr);
-    ctx.textAlign = 'center';
-    ctx.fillText(duration ? (duration / 2).toFixed(1) + 's' : '', w / 2, h - 4 * dpr);
-
-    // Horizontal baseline
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(0, cy);
-    ctx.lineTo(w, cy);
-    ctx.stroke();
-
-    // Draw the REAL PCM audio waveform data
-    if (waveData && waveData.mins && waveData.maxs && waveData.mins.length) {
-      const mins = waveData.mins;
-      const maxs = waveData.maxs;
-      const numPoints = mins.length;
-
+      const mins = waveData.mins, maxs = waveData.maxs, n = mins.length;
       ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(1, (w / numPoints) * 0.95);
+      ctx.lineWidth = Math.max(1, (w / n) * 0.95);
       ctx.shadowColor = color;
       ctx.shadowBlur = 4 * dpr;
-
-      for (let i = 0; i < numPoints; i++) {
-        const x = (i / numPoints) * w;
-        const topY = cy - (maxs[i] * maxHalfH);
-        const botY = cy - (mins[i] * maxHalfH);
-
-        ctx.beginPath();
+      ctx.beginPath();                       // one path, one stroke
+      for (let i = 0; i < n; i++) {
+        const x = (i / n) * w;
+        const topY = cy - maxs[i] * maxHalfH;
+        const botY = cy - mins[i] * maxHalfH;
         ctx.moveTo(x, topY);
         ctx.lineTo(x, Math.max(botY, topY + 1.2 * dpr));
-        ctx.stroke();
       }
-      ctx.shadowBlur = 0;
-    }
-
-    // Real-time Playhead Cursor
-    if (audioEl && duration > 0) {
-      const progress = Math.max(0, Math.min(1, (audioEl.currentTime || 0) / duration));
-      const playheadX = progress * w;
-
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 8 * dpr;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2 * dpr;
-      ctx.beginPath();
-      ctx.moveTo(playheadX, 4 * dpr);
-      ctx.lineTo(playheadX, h - 4 * dpr);
       ctx.stroke();
       ctx.shadowBlur = 0;
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(playheadX, 6 * dpr, 3 * dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Current playback timestamp indicator in top right
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = 'bold ' + (9 * dpr) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(audioEl.currentTime.toFixed(1) + 's / ' + duration.toFixed(1) + 's', w - 8 * dpr, 12 * dpr);
     }
+    state.baseKey = key;
+  },
+
+  draw(canvas) {
+    const state = this.states.get(canvas);
+    if (!state) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const w = Math.round(canvas.clientWidth * dpr);
+    const h = Math.round(canvas.clientHeight * dpr);
+    if (!w || !h) return;
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+
+    const { audioEl, sound, waveData, loading } = state;
+    const key = w + 'x' + h + '|' + (sound ? (sound.id || sound.url) : '-') + '|' + (waveData ? 'w' : loading ? 'l' : 'n');
+    if (state.baseKey !== key) this.buildBase(state, w, h, dpr, key);
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(state.base, 0, 0);
+
+    const duration = (waveData && waveData.duration) || (audioEl && audioEl.duration) || 0;
+    if (!sound || !waveData || !(duration > 0)) return;
+
+    const t = audioEl.currentTime || 0;
+    const x = Math.max(0, Math.min(1, t / duration)) * w;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - dpr, 4 * dpr, 2 * dpr, h - 8 * dpr);
+    ctx.beginPath(); ctx.arc(x, 6 * dpr, 3 * dpr, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = this._font(9, dpr);
+    ctx.textAlign = 'right';
+    ctx.fillText(t.toFixed(1) + 's / ' + duration.toFixed(1) + 's', w - 8 * dpr, 12 * dpr);
   },
 
   bind(canvas, audioEl, color, getGain) {
@@ -564,8 +565,9 @@ const PCG = {
 
     requestAnimationFrame(() => this.draw(canvas));
 
-    const animate = () => {
-      this.draw(canvas);
+    let last = 0;
+    const animate = (ts) => {
+      if (!ts || ts - last >= 33) { last = ts || 0; this.draw(canvas); }
       if (!audioEl.paused && !audioEl.ended) {
         state.animId = requestAnimationFrame(animate);
       }
@@ -604,7 +606,12 @@ const PCG = {
       }
     });
 
-    window.addEventListener('resize', () => this.draw(canvas));
+    let resizeQueued = false;
+    window.addEventListener('resize', () => {
+      if (resizeQueued) return;
+      resizeQueued = true;
+      requestAnimationFrame(() => { resizeQueued = false; this.draw(canvas); });
+    });
   }
 };
 
