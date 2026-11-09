@@ -118,10 +118,10 @@ audio{width:100%;margin:8px 0 2px;border-radius:8px}
     <audio id="aN" controls preload="none"></audio>
     <div class="ctrl-row">
       <label><input type="checkbox" id="loopN"> Loop</label>
-      <div class="vol-group" title="Volume Booster (up to 500%)">
+      <div class="vol-group" title="Volume">
         <span>🔊</span>
-        <input type="range" id="volN" min="1" max="5" step="0.25" value="1.5">
-        <span class="vol-badge" id="volBadgeN">150%</span>
+        <input type="range" id="volN" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+        <span class="vol-badge" id="volBadgeN">100%</span>
       </div>
     </div>
     <div class="notes" id="nN"></div>
@@ -133,10 +133,10 @@ audio{width:100%;margin:8px 0 2px;border-radius:8px}
     <audio id="aA" controls preload="none"></audio>
     <div class="ctrl-row">
       <label><input type="checkbox" id="loopA"> Loop</label>
-      <div class="vol-group" title="Volume Booster (up to 500%)">
+      <div class="vol-group" title="Volume">
         <span>🔊</span>
-        <input type="range" id="volA" min="1" max="5" step="0.25" value="1.5">
-        <span class="vol-badge" id="volBadgeA">150%</span>
+        <input type="range" id="volA" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+        <span class="vol-badge" id="volBadgeA">100%</span>
       </div>
     </div>
     <div class="notes" id="nA"></div>
@@ -328,46 +328,16 @@ function renderNotes(el, s) {
   el.innerHTML = '<div class="info">' + (i.type ? '<span class="type">' + esc(i.type) + '</span>' : '') + '<dl>' + rows + '</dl></div>';
 }
 
-// ── Web Audio Amplification & Boost ──────────────────────────────
+// ── Audio helpers ────────────────────────────────────────────────
+// Playback uses the plain <audio> element (no Web Audio processing), which
+// keeps phones smooth. An AudioContext is only created as a last-resort
+// decoder for the waveform if OfflineAudioContext is unavailable.
 const Wave = {
   ctx: null,
-  _sources: new WeakMap(),
-  _gains: new WeakMap(),
-
   ensure() {
     if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (this.ctx.state === 'suspended') this.ctx.resume();
   },
-
-  connect(audioEl, initialGain) {
-    this.ensure();
-    if (this._sources.has(audioEl)) return;
-    try {
-      const src = this.ctx.createMediaElementSource(audioEl);
-      const gain = this.ctx.createGain();
-      gain.gain.value = initialGain || 1.5;
-      const comp = this.ctx.createDynamicsCompressor();
-      comp.threshold.value = -4;
-      comp.knee.value = 12;
-      comp.ratio.value = 10;
-      comp.attack.value = 0.003;
-      comp.release.value = 0.25;
-      src.connect(gain);
-      gain.connect(comp);
-      comp.connect(this.ctx.destination);
-      this._sources.set(audioEl, src);
-      this._gains.set(audioEl, gain);
-    } catch (e) {
-      console.warn('Audio amplification fallback:', e);
-    }
-  },
-
-  setGain(audioEl, value) {
-    this.ensure();
-    if (!this._sources.has(audioEl)) this.connect(audioEl, value);
-    const g = this._gains.get(audioEl);
-    if (g) g.gain.setTargetAtTime(value, this.ctx.currentTime, 0.03);
-  }
+  setGain(audioEl, value) { audioEl.volume = Math.max(0, Math.min(1, value)); }
 };
 
 // ── Real Audio Phonocardiogram (PCG) Engine ──────────────────────
@@ -574,8 +544,7 @@ const PCG = {
     };
 
     audioEl.addEventListener('play', () => {
-      Wave.ensure();
-      Wave.connect(audioEl, getGain ? getGain() : 1.5);
+      if (getGain) Wave.setGain(audioEl, getGain());
       if (state.animId) cancelAnimationFrame(state.animId);
       state.animId = requestAnimationFrame(animate);
     });
